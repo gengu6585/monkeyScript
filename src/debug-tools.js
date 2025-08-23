@@ -58,17 +58,15 @@ class NavigationDebugger {
     // this.interceptHistoryAPI()
     this.interceptLocationAPI()
     // this.interceptWindowAPI()
-    // this.monitorNetworkRequests()
+    this.monitorNetworkRequests()
     // this.monitorFormSubmissions()
     // this.monitorClickEvents()
     // this.monitorUrlChanges()
     // this.monitorPageVisibility()
     
-    // 定期检查 URL 变化
-    this.startUrlMonitoring()
     
     // 监听页面跳转，自动清空 console
-    this.setupConsoleClear()
+    // this.setupConsoleClear()
   }
 
   /**
@@ -112,23 +110,24 @@ class NavigationDebugger {
    * 拦截 Location API
    */
   interceptLocationAPI() {
-    // 只拦截 location.href setter
     const proto = Object.getPrototypeOf(window.location);
     const originalHref = Object.getOwnPropertyDescriptor(proto, 'href');
     if (originalHref && originalHref.set) {
       this.originalMethods['location.href.set'] = originalHref.set;
       Object.defineProperty(window.location, 'href', {
-        set: (value) => {
-          // 打印调用栈
-          console.log('location.href.set 调用栈:', new Error().stack);
-          this.logNavigation('location', 'href.set', [value], 'Location.href 被设置');
-          this.originalMethods['location.href.set'].call(window.location, value);
+        set: function(value) {
+          if (typeof value === 'string' && value.includes('home')) {
+            debugger; // 只要跳转到包含 'home' 的地址时停住
+          } else {
+            console.log('[monkey_debug] location.href set:', value, new Error().stack);
+          }
+          originalHref.set.call(this, value);
         },
         get: originalHref.get,
         configurable: true
       });
     }
-    // 不再 wrap assign/replace/reload，避免报错
+    // 不再 wrap assign/replace，避免只读属性报错
   }
 
   /**
@@ -324,13 +323,6 @@ class NavigationDebugger {
     }, 100)
   }
 
-  /**
-   * 开始 URL 监控
-   */
-  startUrlMonitoring() {
-    // 这里可以添加更多的监控逻辑
-    console.log('📍 URL 监控已启动')
-  }
   
   /**
    * 设置自动清空 console
@@ -656,7 +648,103 @@ class NavigationDebugger {
 // 创建全局实例
 window.navigationDebugger = new NavigationDebugger()
 
-// 自动启动（可选）
-// window.navigationDebugger.start()
+window.navigationDebugger.start()
+
+window.enableAntiDebug = function() {
+  // 1. 拦截常见的 DevTools 检测方法
+  ['debugger', 'clear', 'profile', 'profileEnd', 'table', 'trace'].forEach(fn => {
+    if (typeof console[fn] === 'function') {
+      try {
+        const desc = Object.getOwnPropertyDescriptor(console, fn);
+        if ((!desc || desc.writable || desc.configurable) && typeof console[fn] === 'function') {
+          const original = console[fn];
+          console[fn] = function(...args) {
+            console.log(`[anti-debug] console.${fn} 被调用`, args, new Error().stack);
+            return original.apply(this, args);
+          };
+        }
+      } catch (e) {
+        // 某些环境下会抛出 TypeError: Cannot assign to read only property
+        // 直接忽略，不影响其它功能
+      }
+    }
+  });
+
+  // 2. 拦截 Function.prototype.toString 检测
+  const originalToString = Function.prototype.toString;
+  Function.prototype.toString = function() {
+    const result = originalToString.apply(this, arguments);
+    if (result.includes('[native code]') && result.includes('debugger')) {
+      console.log('[anti-debug] Function.prototype.toString 检测到 debugger 相关内容', this, new Error().stack);
+    }
+    return result;
+  };
+
+  // 3. 拦截 setInterval/setTimeout 检测
+  ['setInterval', 'setTimeout'].forEach(fn => {
+    const original = window[fn];
+    window[fn] = function(callback, delay, ...args) {
+      if (typeof callback === 'function' && callback.toString().includes('debugger')) {
+        console.log(`[anti-debug] ${fn} 检测到包含 debugger 的回调`, callback, new Error().stack);
+      }
+      return original.apply(this, [callback, delay, ...args]);
+    };
+  });
+
+  // 4. 拦截 DevTools 检测 trick（如 window.outerWidth/outerHeight 变化）
+  let lastWidth = window.outerWidth, lastHeight = window.outerHeight;
+  window.__antiDebugInterval = setInterval(() => {
+    if (window.outerWidth !== lastWidth || window.outerHeight !== lastHeight) {
+      console.log('[anti-debug] 检测到 DevTools 窗口尺寸变化', window.outerWidth, window.outerHeight);
+      lastWidth = window.outerWidth;
+      lastHeight = window.outerHeight;
+    }
+  }, 500);
+
+  // 5. 拦截常见的反调试自执行函数
+  // const originalEval = window.eval;
+  // window.eval = function(code) {
+  //   if (typeof code === 'string' && code.includes('debugger')) {
+  //     console.log('[anti-debug] eval 检测到包含 debugger 的代码', code, new Error().stack);
+  //   }
+  //   return originalEval.apply(this, arguments);
+  // };
+
+  // 6. 拦截 Object.defineProperty 检测
+  const originalDefineProperty = Object.defineProperty;
+  Object.defineProperty = function(obj, prop, descriptor) {
+    if (prop === 'isDebuggerPresent' || prop === '__debug__') {
+      console.log('[anti-debug] Object.defineProperty 检测到 debug 相关属性', prop, new Error().stack);
+    }
+    return originalDefineProperty.apply(this, arguments);
+  };
+
+  // 7. 拦截 document.onkeydown 检测 F12/DevTools 快捷键
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+      console.log('[anti-debug] 检测到 DevTools 快捷键', e);
+    }
+  }, true);
+
+  // 8. 拦截 window.open 检测
+  const originalOpen = window.open;
+  window.open = function(...args) {
+    console.log('[anti-debug] window.open 被调用', args, new Error().stack);
+    return originalOpen.apply(this, args);
+  };
+
+  // 9. 拦截常见的反调试 trick（如 __defineGetter__）
+  if (Object.prototype.__defineGetter__) {
+    const originalDefineGetter = Object.prototype.__defineGetter__;
+    Object.prototype.__defineGetter__ = function(prop, fn) {
+      if (typeof prop === 'string' && prop.toLowerCase().includes('debug')) {
+        console.log('[anti-debug] __defineGetter__ 检测到 debug 相关属性', prop, new Error().stack);
+      }
+      return originalDefineGetter.apply(this, arguments);
+    };
+  }
+}
+// 可选：自动启用
+window.enableAntiDebug();
 
 export default NavigationDebugger

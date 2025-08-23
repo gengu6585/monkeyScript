@@ -1,18 +1,11 @@
 <template>
   <div class="Wokoo" v-if="show">
-    <header class="Wokoo-header">
-      <img :src="logo" class="Wokoo-logo" alt="logo" />
-      <span
-        class="Wokoo-close-icon"
-        @click="handleClose"
-      >
-        ×
-      </span>
-      <p>
-        🔍 页面跳转监控面板
-      </p>
-    </header>
-    
+    <span
+      class="Wokoo-close-icon-fixed"
+      @click="handleClose"
+    >
+      ×
+    </span>
     <!-- 页面跳转日志面板 -->
     <div class="navigation-log-panel">
       <h3>🔍 页面跳转监控</h3>
@@ -28,7 +21,6 @@
           自动滚动
         </label>
       </div>
-      
       <!-- 统计信息面板 -->
       <div v-if="showStatistics" class="stats-panel">
         <h4>📊 监控统计</h4>
@@ -51,7 +43,6 @@
         </div>
         <button @click="showStatistics = false" class="close-stats-btn">关闭统计</button>
       </div>
-      
       <div class="log-container" ref="logContainer">
         <div 
           v-for="(log, index) in navigationLogs" 
@@ -88,7 +79,6 @@
     </div>
   </div>
   <div class="Wokoo-hide" @click="handleClose" v-else>
-    <img :src="logo" class="Wokoo-hide-logo" alt="logo" />
     open
   </div>
 </template>

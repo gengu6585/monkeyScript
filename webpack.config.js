@@ -4,12 +4,15 @@ const base = require('./webpack.config.base')
 
 module.exports = merge(base, {
   mode: process.env.NODE_ENV || 'production',
-  devtool: 'eval-source-map',
+  devtool: 'source-map',
   output: {
     filename: '[name].bundle.js',
     path: __dirname + '/dist',
   },
   devServer: {
+    headers: {
+      'Cross-Origin-Resource-Policy': 'cross-origin', 
+    },
     hot: false, // 禁用热重载
     liveReload: false, // 禁用实时重载
     // webSocketServer: false, // 禁用 WebSocket 服务器
