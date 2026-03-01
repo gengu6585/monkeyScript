@@ -12,10 +12,14 @@ module.exports = merge(base, {
   devServer: {
     headers: {
       'Cross-Origin-Resource-Policy': 'cross-origin', 
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
     },
     hot: false, // 禁用热重载
     liveReload: false, // 禁用实时重载
-    // webSocketServer: false, // 禁用 WebSocket 服务器
+    // 禁用 dev 客户端注入，避免打包产物请求 sockjs-node 导致 ERR_SSL_PROTOCOL_ERROR
+    injectClient: false,
   },
   module: {
     rules: [

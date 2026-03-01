@@ -213,7 +213,8 @@ export default {
         'form': '表单操作',
         'click': '点击事件',
         'xhr': 'AJAX请求',
-        'fetch': 'Fetch请求'
+        'fetch': 'Fetch请求',
+        'cookie': 'Cookie 变化'
       }
       return categoryNames[category] || category
     },
@@ -252,6 +253,9 @@ export default {
         'click': {
           'link': '链接点击',
           'suspicious_button': '可疑按钮'
+        },
+        'cookie': {
+          'change': 'Cookie 变化'
         }
       }
       
