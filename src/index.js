@@ -1,11 +1,6 @@
 import Vue from 'vue'
 import App from './app.vue'
-import './debug-tools.js'
-
-// 自动启动页面跳转监控
-if (window.navigationDebugger) {
-  window.navigationDebugger.start()
-}
+import './debug/index.js'
 
 function injectUI() {
   if (!document.body) {
